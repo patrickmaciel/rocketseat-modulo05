@@ -20,10 +20,14 @@ export default class Repository extends Component {
     repository: {},
     issues: [],
     loading: true,
+    issueStates: ['all', 'open', 'closed'],
+    stateSelect: 'open',
   };
 
   async componentDidMount() {
+    console.log('mount');
     const { match } = this.props;
+    const { stateSelect } = this.state;
 
     const repoName = decodeURIComponent(match.params.repository);
 
@@ -38,7 +42,7 @@ export default class Repository extends Component {
       api.get(`/repos/${repoName}/issues`),
       {
         params: {
-          state: 'open',
+          state: stateSelect,
           per_page: 5,
         },
       },
@@ -51,8 +55,35 @@ export default class Repository extends Component {
     });
   }
 
+  handleFilterChange = async e => {
+    this.setState({
+      stateSelect: e.target.value,
+      loading: true,
+    });
+
+    const { repository, stateSelect } = this.state;
+
+    const issues = await api.get(`/repos/${repository.full_name}/issues`, {
+      params: {
+        state: stateSelect,
+        per_page: 5,
+      },
+    });
+
+    this.setState({
+      loading: false,
+      issues: issues.data,
+    });
+  };
+
   render() {
-    const { repository, issues, loading } = this.state;
+    const {
+      repository,
+      issues,
+      loading,
+      issueStates,
+      stateSelect,
+    } = this.state;
 
     if (loading) {
       return <Loading>Carregando</Loading>;
@@ -67,6 +98,17 @@ export default class Repository extends Component {
           <p>{repository.description}</p>
         </Owner>
 
+        <select
+          id="issue-filter"
+          onChange={e => this.handleFilterChange(e)}
+          value={stateSelect}
+        >
+          {issueStates.map(state => (
+            <option key={state} value={state}>
+              {state}
+            </option>
+          ))}
+        </select>
         <IssueList>
           {issues.map(issue => (
             <li key={String(issue.id)}>
