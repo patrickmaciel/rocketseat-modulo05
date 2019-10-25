@@ -1,11 +1,12 @@
 import React, { Component } from 'react';
 import { Link } from 'react-router-dom';
 import PropTypes from 'prop-types';
+import { FaArrowLeft, FaArrowRight } from 'react-icons/fa';
 
 import api from '../../services/api';
 
 import Container from '../../components/Container';
-import { Loading, Owner, IssueList } from './styles';
+import { Loading, Owner, IssueList, IssueFilter, Paginator } from './styles';
 
 export default class Repository extends Component {
   static propTypes = {
@@ -22,12 +23,13 @@ export default class Repository extends Component {
     loading: true,
     issueStates: ['all', 'open', 'closed'],
     stateSelect: 'open',
+    page: 1,
   };
 
   async componentDidMount() {
     console.log('mount');
     const { match } = this.props;
-    const { stateSelect } = this.state;
+    const { stateSelect, page } = this.state;
 
     const repoName = decodeURIComponent(match.params.repository);
 
@@ -39,13 +41,13 @@ export default class Repository extends Component {
 
     const [repository, issues] = await Promise.all([
       api.get(`/repos/${repoName}`),
-      api.get(`/repos/${repoName}/issues`),
-      {
+      api.get(`/repos/${repoName}/issues`, {
         params: {
           state: stateSelect,
-          per_page: 5,
+          per_page: 2,
+          page,
         },
-      },
+      }),
     ]);
 
     this.setState({
@@ -58,15 +60,33 @@ export default class Repository extends Component {
   handleFilterChange = async e => {
     this.setState({
       stateSelect: e.target.value,
+      page: 1,
+    });
+
+    this.requestIssues(e.target.value, 1);
+  };
+
+  handlePaginatorClick = page => {
+    this.setState({
+      page,
+    });
+
+    const { stateSelect } = this.state;
+    this.requestIssues(stateSelect, page);
+  };
+
+  requestIssues = async (stateSelect, page) => {
+    this.setState({
       loading: true,
     });
 
-    const { repository, stateSelect } = this.state;
+    const { repository } = this.state;
 
     const issues = await api.get(`/repos/${repository.full_name}/issues`, {
       params: {
         state: stateSelect,
-        per_page: 5,
+        per_page: 2,
+        page,
       },
     });
 
@@ -83,6 +103,7 @@ export default class Repository extends Component {
       loading,
       issueStates,
       stateSelect,
+      page,
     } = this.state;
 
     if (loading) {
@@ -98,17 +119,24 @@ export default class Repository extends Component {
           <p>{repository.description}</p>
         </Owner>
 
-        <select
-          id="issue-filter"
-          onChange={e => this.handleFilterChange(e)}
-          value={stateSelect}
-        >
-          {issueStates.map(state => (
-            <option key={state} value={state}>
-              {state}
-            </option>
-          ))}
-        </select>
+        <IssueFilter>
+          <label htmlFor="issue-filter">
+            <span>Filtro: </span>
+
+            <select
+              id="issue-filter"
+              onChange={e => this.handleFilterChange(e)}
+              value={stateSelect}
+            >
+              {issueStates.map(state => (
+                <option key={state} value={state}>
+                  {state}
+                </option>
+              ))}
+            </select>
+          </label>
+        </IssueFilter>
+
         <IssueList>
           {issues.map(issue => (
             <li key={String(issue.id)}>
@@ -125,6 +153,22 @@ export default class Repository extends Component {
             </li>
           ))}
         </IssueList>
+
+        <Paginator>
+          <button
+            type="button"
+            disabled={page === 1 ? 1 : 0}
+            onClick={() => this.handlePaginatorClick(page - 1)}
+          >
+            <FaArrowLeft /> Anterior
+          </button>
+          <button
+            type="button"
+            onClick={() => this.handlePaginatorClick(page + 1)}
+          >
+            Próxima <FaArrowRight />
+          </button>
+        </Paginator>
       </Container>
     );
   }
