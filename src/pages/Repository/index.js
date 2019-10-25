@@ -24,6 +24,7 @@ export default class Repository extends Component {
     issueStates: ['all', 'open', 'closed'],
     stateSelect: 'open',
     page: 1,
+    loadingIssues: false,
   };
 
   async componentDidMount() {
@@ -77,7 +78,7 @@ export default class Repository extends Component {
 
   requestIssues = async (stateSelect, page) => {
     this.setState({
-      loading: true,
+      loadingIssues: true,
     });
 
     const { repository } = this.state;
@@ -91,7 +92,7 @@ export default class Repository extends Component {
     });
 
     this.setState({
-      loading: false,
+      loadingIssues: false,
       issues: issues.data,
     });
   };
@@ -104,6 +105,7 @@ export default class Repository extends Component {
       issueStates,
       stateSelect,
       page,
+      loadingIssues,
     } = this.state;
 
     if (loading) {
@@ -137,22 +139,24 @@ export default class Repository extends Component {
           </label>
         </IssueFilter>
 
-        <IssueList>
-          {issues.map(issue => (
-            <li key={String(issue.id)}>
-              <img src={issue.user.avatar_url} alt={issue.user.login} />
-              <div>
-                <strong>
-                  <a href={issue.html_url}>{issue.title}</a>
-                  {issue.labels.map(label => (
-                    <span key={String(label.id)}>{label.name}</span>
-                  ))}
-                </strong>
-                <p>{issue.user.login}</p>
-              </div>
-            </li>
-          ))}
-        </IssueList>
+        {!loadingIssues && (
+          <IssueList>
+            {issues.map(issue => (
+              <li key={String(issue.id)}>
+                <img src={issue.user.avatar_url} alt={issue.user.login} />
+                <div>
+                  <strong>
+                    <a href={issue.html_url}>{issue.title}</a>
+                    {issue.labels.map(label => (
+                      <span key={String(label.id)}>{label.name}</span>
+                    ))}
+                  </strong>
+                  <p>{issue.user.login}</p>
+                </div>
+              </li>
+            ))}
+          </IssueList>
+        )}
 
         <Paginator>
           <button
